@@ -348,6 +348,7 @@ def dueling_reinforcement_train(net, train_loader):
         memory = []
         probability_weights = []         
         for features, labels in train_loader:
+            
             feature_arrays= features
             random.shuffle(feature_arrays)
             agent = DuelingDDQNAgent(1, 2, 10000)

@@ -28,6 +28,7 @@ def client_logic(net, train_loaders, test_loader, metrics):
             init_time = datetime.now()
             self.set_parameters(parameters)
             train_loader = train_loaders[self.split_id]
+            
             print('Training on data on split id: ' + str(self.split_id), flush=True)
             self.split_id += 1
             

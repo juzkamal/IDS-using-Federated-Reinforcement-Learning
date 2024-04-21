@@ -1,5 +1,6 @@
 import os
 import glob
+import gc
 import numpy as np
 import torch
 import torch.nn as nn
@@ -74,7 +75,10 @@ def test_with_fpr(net, test_loader):
     net.eval()
     
     with torch.no_grad():
-        for features, labels in test_loader:
+        for features_n, labels_n in test_loader:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            features = features_n.to(device)
+            labels = labels_n.to(device)
             labels = labels.type(torch.LongTensor)
             outputs = net(features)
             loss += criterion(outputs, labels).item()
@@ -85,6 +89,9 @@ def test_with_fpr(net, test_loader):
             correct += (predicted == labels).sum().item()
             # fpr, _, _ = roc_curve(predicted, labels)
             # print("labels: ", labels, "predicted: ", predicted)
+            del features, labels
+            gc.collect()
+
     loss /= len(test_loader.dataset)
     accuracy = correct / total
     fpr = fp/total_n

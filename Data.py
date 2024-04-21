@@ -38,6 +38,20 @@ def get_nsl_random_splits():
         
     return splits
 
+def get_mqtt_random_splits():
+    file = "./data/mqtt_train.csv"
+    df = pd.read_csv(file)
+    df = shuffle(df)
+    x = df.drop(columns=["target"])
+    y = df["target"]
+    xs = np.array_split(x, args.num_clients)
+    ys = np.array_split(y, args.num_clients)
+
+    splits = []
+    for x, y in zip(xs, ys):
+        splits.append((x, y))
+
+    return splits
 
 def get_isot_random_splits():
     

@@ -4,6 +4,7 @@ import time
 from multiprocessing import Process
 import sys
 from datetime import datetime
+import torch
 
 from Net import Net
 from Server import SaveFedAvgModelStrategy
@@ -15,6 +16,7 @@ from Data import get_nsl_random_splits
 from Data import get_isot_random_splits
 from Data import get_nsl_customized_splits
 from Data import get_isot_customized_splits
+from Data import get_mqtt_random_splits
 
 
 splits = []
@@ -24,11 +26,13 @@ if(args.dataset == 'nsl'):
         splits = get_nsl_random_splits()
     else:
         splits = get_nsl_customized_splits()
-else:
+elif args.dataset == 'isot':
     if(args.data_split_type == 'random'):
         splits = get_isot_random_splits()
     else:
         splits = get_isot_customized_splits()
+else:
+    splits = get_mqtt_random_splits()
 
 
 def start_server():
@@ -66,6 +70,8 @@ def start_client(client_id):
     train_loaders, test_loader = load_data(x, y)
     
     net = Net()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
     metrics = {"accuracy" : [], "loss" : [], "attention_value":[]}
     
     start_fn = client_logic(net, train_loaders, test_loader, metrics)

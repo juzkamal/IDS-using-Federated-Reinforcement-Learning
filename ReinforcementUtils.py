@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
+import gc
 from operator import itemgetter
 
 from MyUtils import get_tensor_loader
 from Args import args
 
+import threading
 
 
-
-
+LOCK = threading.Lock()
 
 class QNetwork(nn.Module):
     def __init__(self, input_size, output_size):
@@ -341,45 +342,50 @@ def dueling_reinforcement_train(net, train_loader):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=args.lr)
     net.train()
-
-    agent = DuelingDDQNAgent(1, 2, 10000) 
-    for epoch in range(args.epochs):
-        k=0
-        memory = []
-        probability_weights = []         
-        for features, labels in train_loader:
-            
-            feature_arrays= features
-            random.shuffle(feature_arrays)
-            agent = DuelingDDQNAgent(1, 2, 10000)
-            k=k+1
-            if k % 5 == 0:
-               agent.CopyCurrent_and_targetDQNS()
-            labels = labels.type(torch.LongTensor)
-            optimizer.zero_grad()
-            outputs = net(features)
-            targets = get_targets(outputs, labels)
-            loss = criterion(outputs, targets)
-            loss.backward()
-            optimizer.step()
-            
-            for feature, label in zip(features, labels):
-                memory.append((feature, label))
-                
-            probability_weights.extend(get_probability_weights(outputs, labels))
-        
-        # sample = get_random_sample(memory)
-        sample = get_prioritized_sample(memory, probability_weights)
-        
-        # Train on the sampled data - Experience replay
+    agent = DuelingDDQNAgent(1, 2, 10000)
+    with LOCK:
         for epoch in range(args.epochs):
-            for features, labels in sample:
+            k=0
+            memory = []
+            probability_weights = []         
+            for features_n, labels_n in train_loader:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                features = features_n.to(device)
+                labels = labels_n.to(device)
+                feature_arrays= features
+                random.shuffle(feature_arrays)
+                agent = DuelingDDQNAgent(1, 2, 10000)
+                k=k+1
+                if k % 5 == 0:
+                   agent.CopyCurrent_and_targetDQNS()
+                labels = labels.type(torch.LongTensor)
                 optimizer.zero_grad()
                 outputs = net(features)
                 targets = get_targets(outputs, labels)
                 loss = criterion(outputs, targets)
                 loss.backward()
-                optimizer.step()          
+                optimizer.step()
+
+                for feature, label in zip(features, labels):
+                    memory.append((feature, label))
+
+                probability_weights.extend(get_probability_weights(outputs, labels))
+                del features, labels
+                gc.collect()
+
+
+            # sample = get_random_sample(memory)
+            sample = get_prioritized_sample(memory, probability_weights)
+
+            # Train on the sampled data - Experience replay
+            for epoch in range(args.epochs):
+                for features, labels in sample:
+                    optimizer.zero_grad()
+                    outputs = net(features)
+                    targets = get_targets(outputs, labels)
+                    loss = criterion(outputs, targets)
+                    loss.backward()
+                    optimizer.step()          
 
 def get_targets(outputs, labels):
     targets = []
@@ -387,6 +393,7 @@ def get_targets(outputs, labels):
         
         output = output.detach().cpu().numpy()
         label = label.detach().cpu().numpy()
+        print(output)
         prediction = np.argmax(array_softmax(output))
         reward = get_reward(prediction, label)
         

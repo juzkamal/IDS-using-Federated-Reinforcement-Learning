@@ -3,8 +3,8 @@ class Args:
         self.epochs = 100
         self.lr = 0.01
         self.random_state = 42
-        self.test_set_size = 0.1
-        self.batch_size = 64
+        self.test_set_size = 0.05
+        self.batch_size = 32
         self.per_exponent = 2
         self.output_folder = 'script_outputs/'
         self.output_file_suffix = '-output.txt'
@@ -12,6 +12,7 @@ class Args:
         
         self.nsl_columns = 33
         self.isot_columns = 85
+        self.mqtt_columns = 33
         
         self.agent_data_splits = 200
         self.num_clients = 10
@@ -22,15 +23,17 @@ class Args:
 #         Training Specifications
 # =============================================================================
 #         self.dataset = 'isot'
-        self.dataset = 'nsl'
+        self.dataset = 'mqtt'
         self.data_split_type = 'random'
 #         self.data_split_type = 'customized'
 # =============================================================================
         
         if(self.dataset == 'nsl'):
             self.n_columns = self.nsl_columns            
-        else:
+        elif self.dataset=='isot':
             self.n_columns = self.isot_columns
+        else:
+            self.n_columns = self.mqtt_columns
             
         
         if(self.data_split_type == 'customized'):

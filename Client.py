@@ -28,11 +28,11 @@ def client_logic(net, train_loaders, test_loader, metrics):
             init_time = datetime.now()
             self.set_parameters(parameters)
             train_loader = train_loaders[self.split_id]
-            
+
             print('Training on data on split id: ' + str(self.split_id), flush=True)
             self.split_id += 1
             
-            dueling_reinforcement_train(net, train_loader)
+            reinforcement_train(net, train_loader)
             num_examples = len(train_loader.dataset)
             print('Samples in the current round: ' + str(num_examples), flush=True)
             print("Num examples in fit: " + str(num_examples))
@@ -59,7 +59,7 @@ def client_logic(net, train_loaders, test_loader, metrics):
             metrics['attention_value'].append(self.weight_multiplier)
             
             cur_weight_multiplier = self.weight_multiplier
-            self.weight_multiplier = self.fpr_based_weight_modifer(fpr)
+            self.weight_multiplier = self.accuracy_based_weight_modifer(fpr)
             
             finish_time = datetime.now()
             print("Time taken for this evaluation round: ", (finish_time-init_time))
